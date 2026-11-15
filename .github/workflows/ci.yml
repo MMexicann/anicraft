@@ -31,24 +31,3 @@ jobs:
         if [ "$fmt_status" -ne 0 ] || [ "$test_status" -ne 0 ] || [ "$clippy_status" -ne 0 ] || [ "$deny_status" -ne 0 ]; then
           exit 1
         fi
-name: CI
-
-# Fork-only manual runner; exclude this file from upstream pull requests.
-on:
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-jobs:
-  gate:
-    if: github.repository == 'MMexicann/anicraft'
-    uses: storytold/craft-common-actions/.github/workflows/gate.yml@main
-    with:
-      craft-fonts-ref: b076417b5880bd4154bd22f00695b1d28c6bea83
-      packages: >-
-        libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev
-        libgtk-3-dev libasound2-dev mesa-vulkan-drivers
-      tools: cargo-nextest@0.9.150,cargo-deny@0.20.2
-      cache-save-on-dispatch: true
-      command: cargo test --workspace --no-fail-fast && cargo clippy --workspace --all-targets -- -D warnings && cargo deny check licenses bans sources
