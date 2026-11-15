@@ -1836,7 +1836,13 @@ fn scenes_play_in_order_edit_separately_and_survive_save_and_undo() {
     run(&mut s, "scene.rename", json!({"name": "Ending"}));
     assert_eq!(s.doc.scenes[1].name, "Ending");
     assert!(s.execute("scene.rename", &json!({"name": " "})).is_err());
-    assert!(s.execute("scene.select", &json!({"scene": 99})).is_err());
+    let before = (s.doc.clone(), s.scene, s.frame, s.layer, s.state, s.history_len());
+    for (scene, label) in [(99, "100"), (u64::MAX, "18446744073709551616")] {
+        let error = s.execute("scene.select", &json!({"scene": scene})).expect_err("an out-of-range scene must be refused");
+        assert!(matches!(&error, EngineError::Param(_)));
+        assert!(error.to_string().contains(&format!("scene {label} ")), "{error}");
+        assert_eq!((s.doc.clone(), s.scene, s.frame, s.layer, s.state, s.history_len()), before);
+    }
     // The last scene can't be deleted.
     let mut one = Session::default();
     assert!(one.execute("scene.delete", &json!({})).is_err());
