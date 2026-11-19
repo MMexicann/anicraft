@@ -645,6 +645,7 @@ pub(crate) fn set_fill(s: &mut Session, p: &Value) -> Result<Value> {
     // The swatch keeps where its fill lies; a new kind lies across the stage.
     let stage = Rect::new(0.0, 0.0, s.doc.stage.width as f32, s.doc.stage.height as f32);
     let placed = if fill_kind(&swatch) == kind { new } else { new.fitted(&stage) };
+    let selection = opt_bool(p, "selection")?.unwrap_or(true);
     match &placed {
         Paint::Solid(c) => s.style.set_fill_color(*c),
         other => {
@@ -653,7 +654,7 @@ pub(crate) fn set_fill(s: &mut Session, p: &Value) -> Result<Value> {
         }
     }
     s.style.use_fill = true;
-    let changed = if opt_bool(p, "selection")?.unwrap_or(true) && !s.selection.is_empty() {
+    let changed = if selection && !s.selection.is_empty() {
         // Counts from several layers are added up.
         s.each_layer(false, |s| set_selected_fills(s, &spec))?.get("changed").and_then(Value::as_u64).unwrap_or(0)
     } else {
