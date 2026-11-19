@@ -126,6 +126,47 @@ fn set_fill_checks_its_params() {
 }
 
 #[test]
+fn malformed_fill_selection_keeps_the_tool_swatch_and_document() {
+    for selected in [false, true] {
+        for params in [json!({"type": "solid", "color": "#00ff00", "selection": "yes"}), json!({"type": "linear", "selection": []})] {
+            let mut s = Session::default();
+            if selected {
+                square(&mut s, 100.0);
+            }
+            s.style.use_fill = false;
+            let before = s.doc.clone();
+            let info = s.info();
+            let style = (s.style.fill, s.style.fill_paint.clone(), s.style.use_fill);
+            let error = s.execute("paint.set_fill", &params).unwrap_err();
+            assert_eq!(error.to_string(), "param 'selection' must be true or false");
+            assert_eq!((s.style.fill, s.style.fill_paint.clone(), s.style.use_fill), style, "selected={selected}: {params}");
+            assert_eq!(s.doc, before);
+            assert_eq!(s.info(), info);
+        }
+    }
+}
+
+#[test]
+fn valid_fill_selection_flags_keep_their_existing_behavior() {
+    for (selection, changes_selection) in [(None, true), (Some(Value::Null), true), (Some(json!(false)), false), (Some(json!(true)), true)] {
+        let mut s = Session::default();
+        let id = square(&mut s, 100.0);
+        s.style.use_fill = false;
+        let before = s.doc.clone();
+        let mut params = json!({"type": "solid", "color": "#00ff00"});
+        if let Some(selection) = selection {
+            params["selection"] = selection;
+        }
+        let result = run(&mut s, "paint.set_fill", params);
+        assert_eq!(result["changed"], if changes_selection { 1 } else { 0 });
+        assert_eq!(s.style.fill_paint(), Paint::Solid(Rgba::hex(0x00ff00)));
+        assert!(s.style.use_fill);
+        assert_eq!(shape(&s, id).0.fill, Some(Paint::Solid(Rgba::hex(if changes_selection { 0x00ff00 } else { 0xff0000 }))));
+        assert_eq!(s.doc == before, !changes_selection);
+    }
+}
+
+#[test]
 fn transform_fill_moves_turns_scales_and_skews_analytically() {
     let mut s = Session::default();
     let a = square(&mut s, 100.0);
